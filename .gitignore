@@ -1,0 +1,36 @@
+# Raw data
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+
+# Alignment files
+*.bam
+*.bam.bai
+*.sam
+*.cram
+
+# Reference genome files
+reference/GRCh38.primary_assembly.genome.fa
+reference/GRCh38.primary_assembly.genome.fa.gz
+reference/GRCh38.primary_assembly.genome.fa.fai
+reference/gencode.v46.annotation.gtf
+reference/gencode.v46.annotation.gtf.gz
+reference/gencode.v46.transcripts.fa.gz
+reference/STAR_index/
+
+# Trimmed reads
+trimmed/*.fastq.gz
+
+# Large outputs
+*.bigWig
+*.bw
+*.bed.gz
+
+# fastp QC reports (HTML can be large, keep JSON)
+fastp_qc_report.html
+
+# OS files
+.DS_Store
+__pycache__/
+*.pyc

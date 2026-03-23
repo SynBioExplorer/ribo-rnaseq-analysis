@@ -1,0 +1,19 @@
+name: patrick_rnaseq
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - python=3.11
+  - star
+  - subread
+  - fastp
+  - samtools
+  - pysam
+  - htseq
+  - pybigwig
+  - pandas
+  - numpy
+  - plotly
+  - pip:
+    - kaleido
+    - ipykernel
