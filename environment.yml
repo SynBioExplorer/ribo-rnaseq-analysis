@@ -4,14 +4,17 @@ channels:
   - conda-forge
 dependencies:
   - python=3.11
-  - star
-  - subread
-  - fastp
-  - samtools
+  - star=2.7.11b
+  - subread=2.1.1
+  - fastp=1.1.0
+  - samtools=1.22.1
   - deeptools
-  - pandas
-  - numpy
-  - plotly
+  - bowtie2=2.5.5
+  - pandas=3.0.1
+  - numpy=1.26.4
+  - plotly=6.6.0
+  - scikit-learn
   - pip:
     - kaleido
     - ipykernel
+    - scipy
