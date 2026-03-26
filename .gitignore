@@ -3,6 +3,7 @@
 *.fastq.gz
 *.fq
 *.fq.gz
+*.zip
 Data/
 
 # Alignment files
@@ -22,6 +23,7 @@ bigwig/
 salmon/
 multiqc_report/
 utr_coverage_matrix.gz
+utr_coverage_matrix
 three_prime_utrs.bed
 _STARtmp/
 _mfe_worker*.py
