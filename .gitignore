@@ -3,34 +3,46 @@
 *.fastq.gz
 *.fq
 *.fq.gz
+Data/
 
 # Alignment files
 *.bam
 *.bam.bai
 *.sam
 *.cram
+aligned/
 
-# Reference genome files
-reference/GRCh38.primary_assembly.genome.fa
-reference/GRCh38.primary_assembly.genome.fa.gz
-reference/GRCh38.primary_assembly.genome.fa.fai
-reference/gencode.v46.annotation.gtf
-reference/gencode.v46.annotation.gtf.gz
-reference/gencode.v46.transcripts.fa.gz
-reference/STAR_index/
+# Reference genome
+reference/
 
-# Trimmed reads
-trimmed/*.fastq.gz
+# Intermediate outputs
+trimmed/
+rRNA_depleted/
+bigwig/
+salmon/
+multiqc_report/
+utr_coverage_matrix.gz
+three_prime_utrs.bed
+_STARtmp/
+_mfe_worker*.py
+mfe_cache.csv
 
 # Large outputs
 *.bigWig
 *.bw
 *.bed.gz
 
-# fastp QC reports (HTML can be large, keep JSON)
-fastp_qc_report.html
+# Stale logs
+Log.final.out
+Log.out
+Log.progress.out
+SJ.out.tab
+Aligned.out.sam
+/qc_summary.html
 
 # OS files
 .DS_Store
+/._*
+figures/._*
 __pycache__/
 *.pyc

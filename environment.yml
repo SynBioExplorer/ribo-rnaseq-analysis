@@ -9,13 +9,20 @@ dependencies:
   - fastp=1.1.0
   - samtools=1.22.1
   - deeptools
+  - pysam
   - bowtie2=2.5.5
   - multiqc
+  - salmon
   - pandas=3.0.1
   - numpy=1.26.4
   - plotly=6.6.0
   - scikit-learn
+  - tqdm
   - pip:
     - kaleido
     - ipykernel
+    - ipywidgets
+    - nbformat
     - scipy
+    - statsmodels
+    - viennarna

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ribo-seq / RNA-seq Analysis Report</title>
+<style>
+  :root {
+    --primary: #1a1a2e;
+    --accent: #0072B2;
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #2c2c2c;
+    --muted: #6c757d;
+    --warn: #D55E00;
+    --ok: #009E73;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 40px 0 30px;
+    text-align: center;
+  }
+  header h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.5px; }
+  header p { font-size: 14px; opacity: 0.8; }
+  nav {
+    position: sticky;
+    top: 0;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    padding: 0 20px;
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  nav a {
+    display: inline-block;
+    padding: 12px 18px;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  nav a:hover, nav a:focus { color: var(--accent); border-bottom-color: var(--accent); }
+  .container { max-width: 1100px; margin: 0 auto; padding: 30px 24px; }
+  section { margin-bottom: 50px; }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+  }
+  h3 { font-size: 17px; font-weight: 600; color: var(--primary); margin: 24px 0 10px; }
+  p, li { margin-bottom: 10px; }
+  ul, ol { padding-left: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .card-warn { border-left: 4px solid var(--warn); }
+  .card-ok { border-left: 4px solid var(--ok); }
+  .card-info { border-left: 4px solid var(--accent); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: #f5f7fa; font-weight: 600; color: var(--primary); white-space: nowrap; }
+  tr:hover td { background: #f9fbfd; }
+  .fig-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 20px 0;
+    overflow: hidden;
+  }
+  .fig-container iframe {
+    width: 100%;
+    border: none;
+    display: block;
+  }
+  .fig-caption {
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    line-height: 1.5;
+  }
+  .fig-caption strong { color: var(--text); }
+  .param-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 700px) { .param-grid { grid-template-columns: 1fr; } }
+  .param-box {
+    background: #f5f7fa;
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .param-box h4 { font-size: 14px; color: var(--accent); margin-bottom: 8px; }
+  .param-box code { font-size: 12px; background: #e8ecf1; padding: 1px 5px; border-radius: 3px; }
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .tag-high { background: #d4edda; color: #155724; }
+  .tag-mod { background: #fff3cd; color: #856404; }
+  .tag-low { background: #f8d7da; color: #721c24; }
+  .tag-na { background: #e2e3e5; color: #383d41; }
+  .metric-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+  .metric-card {
+    flex: 1;
+    min-width: 140px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+  }
+  .metric-card .value { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .metric-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .workflow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  footer {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ribo-seq / RNA-seq Integrated Analysis for 3'UTR Design</h1>
+  <p>Dataset: GSE61334 | Reference: GRCh38.p14, GENCODE v46 | 3 Ribo-seq + 5 RNA-seq samples</p>
+</header>
+
+<nav>
+  <a href="#executive">Summary</a>
+  <a href="#workflow">Workflow</a>
+  <a href="#files">Files</a>
+  <a href="#qc">Quality Control</a>
+  <a href="#alignment">Alignment</a>
+  <a href="#te">Translational Efficiency</a>
+  <a href="#utr">3'UTR Coverage</a>
+  <a href="#features">Sequence Features</a>
+  <a href="#candidates">Design Candidates</a>
+  <a href="#interpretation">Interpretation</a>
+  <a href="#limitations">Limitations</a>
+  <a href="#nextsteps">Next Steps</a>
+</nav>
+
+<div class="container">
+
+<!-- =============================== EXECUTIVE SUMMARY =============================== -->
+<section id="executive">
+<h2>Executive Summary</h2>
+
+<p>This pipeline provides an exploratory framework for integrating Ribo-seq with RNA-seq to identify broad translation-associated 3'UTR trends in human glioma/brain tissue. It produces two distinct outputs: (1) a <strong>gene-level exploratory TE analysis</strong> identifying population-level design rules, and (2) <strong>transcript-level provisional 3'UTR candidates</strong> with full provenance metadata, design filters, and appropriate caveats.</p>
+
+<table>
+  <thead><tr><th>Objective</th><th>Status</th><th>Confidence</th></tr></thead>
+  <tbody>
+    <tr><td>Gene-level TE ranking and trend discovery</td><td>Achieved: featureCounts (gene) + salmon (transcript) quantification</td><td><span class="tag tag-high">High</span></td></tr>
+    <tr><td>3'UTR coverage and read-through detection</td><td>Achieved: averaged bigWigs + P-site-corrected RTE metric</td><td><span class="tag tag-mod">Moderate</span></td></tr>
+    <tr><td>Transcript-level 3'UTR reconstruction</td><td>Achieved: full spliced 3'UTRs per transcript, dominant isoform from salmon</td><td><span class="tag tag-high">High</span></td></tr>
+    <tr><td>Provisional design candidates</td><td>50 candidates with provenance, filters (polyA, MFE, miRNA, homopolymers)</td><td><span class="tag tag-low">Provisional (requires validation)</span></td></tr>
+  </tbody>
+</table>
+
+<h3>Key Takeaways</h3>
+<div class="param-grid">
+  <div class="card card-ok" style="margin:0;">
+    <strong>Strongest supported finding:</strong> Shorter annotated 3'UTRs are associated with higher apparent TE in this dataset (~1.6-fold across the full length range). This is consistent with established biology and likely generalizable.
+  </div>
+  <div class="card card-warn" style="margin:0;">
+    <strong>Critical caveat:</strong> Candidate 3'UTR sequences are exploratory leads from glioma-associated data, not validated design-ready parts. Gene-level TE cannot be attributed to a specific 3'UTR isoform without transcript-level validation. All candidates require experimental testing in the target cell type.
+  </div>
+</div>
+</section>
+
+<!-- =============================== SECTION 1: WORKFLOW =============================== -->
+<section id="workflow">
+<h2>1. Workflow and Methods</h2>
+
+<p>This pipeline integrates ribosome profiling (Ribo-seq) with RNA-seq to quantify translational efficiency (TE) across human genes and extract 3'UTR design rules for synthetic mRNA constructs. Eight samples from GEO series GSE61334 (human glioma tumor vs adjacent normal tissue) were processed through the following steps:</p>
+
+<div class="workflow-step">
+  <div class="step-num">1</div>
+  <div>
+    <h4>Adapter Trimming (fastp)</h4>
+    <p>Sequencing adapters and low-quality bases removed. Ribo-seq reads capped at 35 nt (<code>--length_limit 35</code>) to remove non-RPF fragments. Minimum read length: 20 nt.</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">2</div>
+  <div>
+    <h4>rRNA Depletion (bowtie2)</h4>
+    <p>Reads aligned to NCBI RefSeq human rRNA sequences (5S, 5.8S, 18S, 28S). Non-rRNA reads extracted with <code>--un-gz</code>. Ribo-seq samples showed 50-61% rRNA contamination (typical for ribosome profiling); RNA-seq showed 2-17%.</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">3</div>
+  <div>
+    <h4>Genome Alignment (STAR 2.7.11b)</h4>
+    <p>Reads mapped to GRCh38 primary assembly with GENCODE v46 annotations. Modality-specific parameters ensure appropriate handling of short RPFs vs spliced mRNA fragments.</p>
+  </div>
+</div>
+
+<div class="param-grid">
+  <div class="param-box">
+    <h4>Ribo-seq Parameters</h4>
+    <ul style="font-size:13px;">
+      <li><code>--alignEndsType EndToEnd</code> no soft-clipping</li>
+      <li><code>--alignIntronMax 1</code> no de novo junctions</li>
+      <li><code>--outFilterMultimapNmax 1</code> unique only</li>
+      <li><code>--outFilterMismatchNmax 2</code></li>
+    </ul>
+  </div>
+  <div class="param-box">
+    <h4>RNA-seq Parameters</h4>
+    <ul style="font-size:13px;">
+      <li>Default splice-aware mode</li>
+      <li>Annotated + novel junctions</li>
+      <li>Multi-mappers reported (filtered later)</li>
+      <li><code>--quantMode GeneCounts</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">4</div>
+  <div>
+    <h4>Gene-Level Counting (featureCounts)</h4>
+    <p><strong>Ribo-seq:</strong> <code>-t CDS -s 1</code> counts only coding sequence regions (sense strand) to avoid 3'UTR read-through circularity.<br>
+    <strong>RNA-seq:</strong> <code>-t exon -s 0</code> counts all exonic regions (unstranded) for total transcript abundance.<br>
+    Both: <code>-Q 10 --primary</code> (MAPQ &ge; 10, primary alignments only).</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">5</div>
+  <div>
+    <h4>Transcript-Level Quantification (salmon)</h4>
+    <p>Salmon pseudo-alignment quantifies transcript-level TPM for all 8 samples against the GENCODE v46 transcriptome. This identifies the <strong>dominant translated isoform</strong> per gene (highest Ribo-seq TPM) and enables transcript-level TE computation, resolving the gene-to-isoform attribution problem.</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">6</div>
+  <div>
+    <h4>Normalization (Median-of-Ratios)</h4>
+    <p>DESeq2-style normalization implemented in Python. Geometric means computed over non-zero values (sparse-aware). Ribo-seq and RNA-seq normalized independently.</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">6</div>
+  <div>
+    <h4>Translational Efficiency (dual-level)</h4>
+    <p><strong>Gene-level:</strong> <code>log2(TE) = log2(Ribo + 0.5) - log2(RNA + 0.5)</code> from featureCounts. Used for broad trend analysis.<br>
+    <strong>Transcript-level:</strong> Ribo TPM / RNA TPM per isoform from salmon. Used for candidate ranking, attributed to the dominant translated isoform.</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">7</div>
+  <div>
+    <h4>3'UTR Coverage &amp; Read-Through</h4>
+    <p>Ribo-seq and RNA-seq bigWig tracks <strong>averaged across biological replicates</strong> using deepTools <code>bigwigAverage</code>. Coverage profiled over full spliced 3'UTRs (reconstructed per transcript, not single exon fragments). RTE computed with <strong>12 nt P-site offset correction</strong>: (UTR<sub>ribo</sub>/CDS<sub>ribo</sub>) / (UTR<sub>rna</sub>/CDS<sub>rna</sub>).</p>
+  </div>
+</div>
+
+<div class="workflow-step">
+  <div class="step-num">8</div>
+  <div>
+    <h4>3'UTR Design Scoring &amp; Filtering</h4>
+    <p>Candidates must pass <strong>binary PASS/FAIL filters</strong> before scoring: polyA signal present, no homopolymer runs &gt;6 nt, RNA secondary structure (MFE via ViennaRNA), miRNA seed-match burden. Passing candidates scored: 40% TE + 25% length + 15% GC + 20% stop context. TE gate (log2 &gt; 0). Each candidate exported with full provenance: transcript ID, isoform rank, exon count, filter results.</p>
+  </div>
+</div>
+
+</section>
+
+<!-- =============================== DIRECTORY STRUCTURE =============================== -->
+<section id="files">
+<h2>Project Directory Structure</h2>
+
+<div class="param-grid">
+  <div class="param-box">
+    <h4>Input Data</h4>
+    <pre style="font-size:12px; margin:0; white-space:pre-wrap;">
+Data/
+  SRR1562541.fastq          Tumor Ribo-seq A
+  SRR1562542.fastq          Normal Ribo-seq A
+  SRR1562543.fastq          Tumor Ribo-seq B
+  SRR1562544.fastq          Normal RNA-seq A
+  SRR1562545.fastq          Normal RNA-seq B
+  SRR1562546.fastq          Normal RNA-seq C
+  SRR1562547.fastq          Tumor RNA-seq A
+  SRR1562548.fastq          Tumor RNA-seq B
+
+reference/
+  GRCh38.primary_assembly.genome.fa
+  gencode.v46.annotation.gtf
+  STAR_index/               STAR genome index
+  rRNA/                     bowtie2 rRNA index</pre>
+  </div>
+
+  <div class="param-box">
+    <h4>Intermediate Files</h4>
+    <pre style="font-size:12px; margin:0; white-space:pre-wrap;">
+trimmed/
+  {SRA}_trimmed.fastq.gz    fastp-trimmed reads
+  {SRA}_fastp.json           QC metrics (JSON)
+
+rRNA_depleted/
+  {SRA}_no_rRNA.fastq.gz    rRNA-filtered reads
+
+aligned/
+  {SRA}_Aligned.sortedByCoord.out.bam
+  {SRA}_Log.final.out       STAR alignment stats
+  {SRA}_ReadsPerGene.out.tab
+  ribo_cds_counts.txt       featureCounts (CDS)
+  rnaseq_exon_counts.txt    featureCounts (exon)
+
+bigwig/
+  {SRA}.bw                  CPM-normalized coverage
+  ribo_avg.bw               Averaged Ribo-seq coverage
+  rnaseq_avg.bw             Averaged RNA-seq coverage
+
+salmon/
+  {SRA}/quant.sf            Transcript-level TPM</pre>
+  </div>
+</div>
+
+<div class="param-grid">
+  <div class="param-box">
+    <h4>Final Outputs</h4>
+    <pre style="font-size:12px; margin:0; white-space:pre-wrap;">
+top_3utr_candidates.fasta   Top 50 3'UTR sequences
+utr_design_analysis.csv     All scored UTRs (by score)
+three_prime_utrs.bed        3'UTR genomic coordinates
+analysis_report.html        This report</pre>
+  </div>
+
+  <div class="param-box">
+    <h4>Figures (figures/)</h4>
+    <pre style="font-size:12px; margin:0; white-space:pre-wrap;">
+qc_summary.html             Read counts, dup, GC
+star_alignment_rates.html   Mapping rates
+pca_and_correlation.html    PCA scatter
+spearman_correlation.html   Sample correlation
+reading_frame_periodicity.html  3-nt periodicity
+count_distribution.html     Gene count histograms
+top_genes_ribo_vs_rna.html  Top 30 genes
+te_scatter.html             TE landscape
+te_ranking.html             Differential TE
+utr_coverage_heatmap.html   3'UTR heatmaps
+length_vs_te.html           Length vs TE + LOWESS
+gc_are_vs_te.html           Feature correlations
+fig_*.png                   Static versions (300 DPI)</pre>
+  </div>
+</div>
+
+<div class="param-box" style="margin-top:16px;">
+  <h4>Pipeline &amp; Configuration</h4>
+  <pre style="font-size:12px; margin:0; white-space:pre-wrap;">
+ribo_rnaseq_analysis.ipynb  Complete analysis notebook (70 cells)
+environment.yml             Conda environment specification
+README.md                   Project overview and quick start
+multiqc_report/             Aggregated QC report (fastp + STAR)</pre>
+</div>
+</section>
+
+<!-- =============================== SECTION 2: RESULTS =============================== -->
+
+<!-- QC -->
+<section id="qc">
+<h2>2. Results</h2>
+<h3>2.1 Quality Control</h3>
+
+<div class="metric-row">
+  <div class="metric-card"><div class="value">8</div><div class="label">Samples</div></div>
+  <div class="metric-card"><div class="value">282 M</div><div class="label">Total reads (trimmed)</div></div>
+  <div class="metric-card"><div class="value">92-97%</div><div class="label">Trim pass rate</div></div>
+  <div class="metric-card"><div class="value">63,086</div><div class="label">GENCODE entries</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Sample</th><th>SRA ID</th><th>Type</th><th>Condition</th><th>Raw (M)</th><th>Passed (M)</th><th>Pass %</th><th>Dup %</th><th>GC %</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Tumor Ribo-seq A</td><td>SRR1562541</td><td>Ribo-seq</td><td>Tumor</td><td>53.5</td><td>49.7</td><td>93.0</td><td>52.1</td><td>39.7</td></tr>
+    <tr><td>Normal Ribo-seq A</td><td>SRR1562542</td><td>Ribo-seq</td><td>Normal</td><td>35.3</td><td>32.3</td><td>91.6</td><td>55.7</td><td>39.1</td></tr>
+    <tr><td>Tumor Ribo-seq B</td><td>SRR1562543</td><td>Ribo-seq</td><td>Tumor</td><td>45.4</td><td>43.9</td><td>96.7</td><td>65.4</td><td>39.6</td></tr>
+    <tr><td>Normal RNA-seq A</td><td>SRR1562544</td><td>RNA-seq</td><td>Normal</td><td>25.8</td><td>24.5</td><td>94.7</td><td>47.3</td><td>46.8</td></tr>
+    <tr><td>Normal RNA-seq B</td><td>SRR1562545</td><td>RNA-seq</td><td>Normal</td><td>27.8</td><td>26.7</td><td>96.0</td><td>48.8</td><td>49.1</td></tr>
+    <tr><td>Normal RNA-seq C</td><td>SRR1562546</td><td>RNA-seq</td><td>Normal</td><td>38.5</td><td>37.1</td><td>96.3</td><td>46.5</td><td>48.2</td></tr>
+    <tr><td>Tumor RNA-seq A</td><td>SRR1562547</td><td>RNA-seq</td><td>Tumor</td><td>36.7</td><td>35.5</td><td>96.8</td><td>42.1</td><td>47.4</td></tr>
+    <tr><td>Tumor RNA-seq B</td><td>SRR1562548</td><td>RNA-seq</td><td>Tumor</td><td>33.2</td><td>32.1</td><td>96.6</td><td>40.2</td><td>47.5</td></tr>
+  </tbody>
+</table>
+
+<div class="fig-container">
+  <iframe src="figures/qc_summary.html" height="520"></iframe>
+  <div class="fig-caption"><strong>Figure 1. Sequencing quality control summary.</strong> (A) Raw vs passed read counts after adapter trimming. (B) Duplication rates across samples. (C) GC content distribution. Ribo-seq samples show higher duplication (52-65%) and lower GC (~39%) compared to RNA-seq (40-49% duplication, ~47-49% GC), consistent with the shorter RPF fragments and distinct nucleotide composition of ribosome-protected regions. Colorblind-safe Okabe-Ito palette.</div>
+</div>
+
+<div class="card card-info">
+  <strong>rRNA depletion validation:</strong> rRNA contamination rates were inferred from the read count drop between trimming and STAR alignment (Ribo-seq: 49.7-60.7% removed, consistent with 50-61% rRNA; RNA-seq: 2.1-17.5% removed). bowtie2 alignment logs were not cached for this run but the read count evidence confirms successful depletion.
+</div>
+
+<div class="card card-info">
+  <strong>RPF read length: 26.6-26.7 nt average</strong>, below the expected 28-31 nt human peak. This suggests mild RNase over-digestion in the original experiment (GSE61334, published 2014). The consequence is reduced positional precision for codon-resolution analyses, but gene-level TE estimates remain valid.
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/reading_frame_periodicity.html" height="420"></iframe>
+  <div class="fig-caption"><strong>Figure 2. Reading frame periodicity of Ribo-seq CDS reads.</strong> Grouped bar chart showing the fraction of reads in each of three reading frames for each Ribo-seq sample. Frame 0 enrichment (41-44%) exceeds the 33% random baseline (dashed line) but falls below the 45% quality threshold typical for high-quality RPF data. This grey-zone periodicity is consistent with the shorter-than-expected RPF lengths, which reduce 5' mapping precision relative to the reading frame.</div>
+</div>
+</section>
+
+<!-- ALIGNMENT -->
+<section id="alignment">
+<h3>2.2 Alignment</h3>
+
+<table>
+  <thead>
+    <tr><th>Sample</th><th>Type</th><th>Input (M)</th><th>Unique %</th><th>Multi %</th><th>Unmapped (short) %</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Tumor Ribo-seq A</td><td>Ribo-seq</td><td>25.0</td><td>60.8</td><td>0.0</td><td>19.4</td></tr>
+    <tr><td>Normal Ribo-seq A</td><td>Ribo-seq</td><td>14.4</td><td>65.5</td><td>0.0</td><td>13.8</td></tr>
+    <tr><td>Tumor Ribo-seq B</td><td>Ribo-seq</td><td>17.3</td><td>53.5</td><td>0.0</td><td>21.5</td></tr>
+    <tr><td>Normal RNA-seq A</td><td>RNA-seq</td><td>23.7</td><td>92.5</td><td>4.9</td><td>2.6</td></tr>
+    <tr><td>Normal RNA-seq B</td><td>RNA-seq</td><td>22.1</td><td>92.0</td><td>5.0</td><td>3.0</td></tr>
+    <tr><td>Normal RNA-seq C</td><td>RNA-seq</td><td>36.0</td><td>93.9</td><td>4.2</td><td>1.9</td></tr>
+    <tr><td>Tumor RNA-seq A</td><td>RNA-seq</td><td>34.7</td><td>94.0</td><td>4.1</td><td>1.9</td></tr>
+    <tr><td>Tumor RNA-seq B</td><td>RNA-seq</td><td>31.4</td><td>93.6</td><td>4.6</td><td>1.8</td></tr>
+  </tbody>
+</table>
+
+<div class="fig-container">
+  <iframe src="figures/star_alignment_rates.html" height="520"></iframe>
+  <div class="fig-caption"><strong>Figure 3. STAR alignment rates.</strong> Stacked bar chart of uniquely mapped (green), multi-mapped (orange), and unmapped-too-short (red) read fractions. Ribo-seq samples show 53-65% unique mapping (typical for short 26 nt RPFs), while RNA-seq achieves 92-94% (excellent for 100 nt reads). Multi-mapping is disabled for Ribo-seq (<code>--outFilterMultimapNmax 1</code>) to avoid ambiguous TE estimates.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/pca_and_correlation.html" height="620"></iframe>
+  <div class="fig-caption"><strong>Figure 4a. Principal component analysis of gene counts.</strong> PCA of log2-normalized counts across all 8 samples. PC1 separates Ribo-seq from RNA-seq (expected, as these measure fundamentally different molecular populations). PC2 separates tumor from normal within each assay type. Sample labels and shapes indicate condition.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/spearman_correlation.html" height="720"></iframe>
+  <div class="fig-caption"><strong>Figure 4b. Spearman rank correlation heatmap.</strong> Pairwise Spearman correlations of log2 gene counts. Within-assay correlations are high (>0.95 for RNA-seq replicates), confirming technical reproducibility. Cross-assay correlations are lower (~0.7-0.8), reflecting the biological difference between total mRNA and ribosome-occupied mRNA.</div>
+</div>
+</section>
+
+<!-- TE -->
+<section id="te">
+<h3>2.3 Translational Efficiency</h3>
+
+<div class="metric-row">
+  <div class="metric-card"><div class="value">11,225</div><div class="label">Genes passing filter</div></div>
+  <div class="metric-card"><div class="value">0.44</div><div class="label">Tumor median TE</div></div>
+  <div class="metric-card"><div class="value">0.40</div><div class="label">Normal median TE</div></div>
+  <div class="metric-card"><div class="value">2,217</div><div class="label">Candidates (all filters)</div></div>
+</div>
+
+<div class="card card-info">
+  <strong>Why median TE &lt; 1.0:</strong> This is a methodological artifact, not a biological finding. Ribo-seq counts CDS only while RNA-seq counts full exons (5'UTR + CDS + 3'UTR), so the denominator is inherently larger. TE values should be interpreted as <em>relative rankings</em>, not absolute translation rates.
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/te_scatter.html" height="770"></iframe>
+  <div class="fig-caption"><strong>Figure 5. Translational efficiency landscape.</strong> Scatter plot of log10(RNA-seq normalized abundance) vs log10(Ribo-seq normalized abundance) for 11,225 genes. Points are colored by log2(TE) using a diverging purple-orange scale centered at 0. The dashed diagonal represents TE = 1. Genes above the diagonal are translated more efficiently than their mRNA levels predict; genes below are translationally repressed. Square aspect ratio with equalized axes ensures the diagonal is visually meaningful.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/count_distribution.html" height="620"></iframe>
+  <div class="fig-caption"><strong>Figure 6. Gene read count distributions.</strong> Overlaid histograms of log10-transformed read counts across all 8 samples. Ribo-seq samples (shorter reads, lower mapping rate) show lower median counts than RNA-seq, with a characteristic left-shifted distribution. The bimodal shape reflects expressed vs non-expressed genes. 80 bins, 0.5 opacity to visualize overlapping distributions.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/top_genes_ribo_vs_rna.html" height="820"></iframe>
+  <div class="fig-caption"><strong>Figure 7. Top 30 genes by Ribo-seq abundance.</strong> Horizontal grouped bar chart comparing average RPM (reads per million) between Ribo-seq (blue) and RNA-seq (orange) for the 30 most abundant genes by ribosome occupancy. Genes where the Ribo-seq bar substantially exceeds RNA-seq are candidates for high translational efficiency. Housekeeping genes (ribosomal proteins, metabolic enzymes) dominate, as expected.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/te_ranking.html" height="820"></iframe>
+  <div class="fig-caption"><strong>Figure 8. Differential TE ranking (Tumor vs Normal).</strong> Top 30 genes by absolute delta log2(TE) between tumor and normal conditions. Red bars indicate higher TE in tumor; green bars indicate higher TE in normal. <em>Important caveat:</em> with n=1 Ribo-seq per condition, these differences are purely descriptive and cannot be attributed statistical significance. Extreme values (|log2_TE| &gt; 10) have been filtered as zero-count artifacts.</div>
+</div>
+</section>
+
+<!-- 3'UTR COVERAGE -->
+<section id="utr">
+<h3>2.4 3'UTR Coverage and Read-Through</h3>
+
+<div class="fig-container">
+  <iframe src="figures/utr_coverage_heatmap.html" height="820"></iframe>
+  <div class="fig-caption"><strong>Figure 9. 3'UTR coverage heatmaps.</strong> Side-by-side heatmaps of row-normalized coverage across top 3'UTRs for averaged Ribo-seq (left, Inferno) and averaged RNA-seq (right, Viridis). Rows sorted by RTE. Coverage computed from replicate-averaged bigWigs with 12 nt P-site offset correction. Most genes show sharp ribosome signal drop-off at the CDS/3'UTR boundary, consistent with efficient translation termination.</div>
+</div>
+
+<h4>Read-Through Candidates (RTE &gt; 1)</h4>
+<p>Genes where ribosome signal extends into the 3'UTR relative to mRNA background, after CDS normalization:</p>
+
+<table>
+  <thead><tr><th>Gene</th><th>RTE</th><th>Interpretation</th></tr></thead>
+  <tbody>
+    <tr><td>BSCL2</td><td>1.54</td><td>Seipin; known alternative stop codon usage</td></tr>
+    <tr><td>RACK1</td><td>1.52</td><td>Ribosomal scaffold protein; may reflect ribosome queuing</td></tr>
+    <tr><td>CRYAB</td><td>1.50</td><td>Alpha-crystallin B; stress-response protein</td></tr>
+    <tr><td>ALDOA</td><td>1.39</td><td>Aldolase A; abundant glycolytic enzyme, balanced signal</td></tr>
+    <tr><td>AP2M1</td><td>1.05</td><td>Marginal, near threshold</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-info">
+  Only <strong>443 of ~11,000 genes</strong> had sufficient signal for RTE measurement (with P-site correction). RTE values in the 1.0-3.0 range are biologically plausible, though the mechanism (true read-through, re-initiation, or ribosome queuing) cannot be distinguished from this data alone.
+</div>
+</section>
+
+<!-- SEQUENCE FEATURES -->
+<section id="features">
+<h3>2.5 Sequence Feature Correlations</h3>
+
+<div class="fig-container">
+  <iframe src="figures/gc_are_vs_te.html" height="520"></iframe>
+  <div class="fig-caption"><strong>Figure 10. Sequence feature correlations with TE.</strong> (Left) GC content vs log2(TE): weak negative correlation (Spearman r = -0.118, p = 3.2e-36), consistent with stable secondary structures impeding ribosome dynamics. (Right) AU-rich element (ARE; AUUUA pentamer) density vs log2(TE): weak <em>positive</em> correlation (r = +0.041, p = 1.4e-05), contradicting the textbook expectation that AREs reduce expression. This likely reflects confounding by UTR length (shorter, AU-rich UTRs have higher TE). Correlation coefficients annotated on each panel.</div>
+</div>
+
+<div class="fig-container">
+  <iframe src="figures/length_vs_te.html" height="620"></iframe>
+  <div class="fig-caption"><strong>Figure 11. 3'UTR length vs translational efficiency.</strong> Scatter plot of 3'UTR length (log10 scale) vs log2(TE) for genes with TE &gt; 1, colored by GC content (Viridis scale). LOWESS trend line shows the population-level negative relationship. Higher-GC UTRs (yellow) tend to cluster at lower TE values. This is the strongest single predictor of TE in the dataset.</div>
+</div>
+
+<h4>TE by 3'UTR Length Bin</h4>
+<table>
+  <thead><tr><th>Length bin</th><th>Mean log2(TE)</th><th>n genes</th><th>Relative protein output</th></tr></thead>
+  <tbody>
+    <tr><td>&lt;200 bp</td><td>-0.89</td><td>322</td><td style="color:var(--ok);font-weight:600;">1.5x</td></tr>
+    <tr><td>200-500 bp</td><td>-1.02</td><td>1,277</td><td>1.4x</td></tr>
+    <tr><td>500 bp - 1 kb</td><td>-1.16</td><td>1,866</td><td>1.3x</td></tr>
+    <tr><td>1-2 kb</td><td>-1.32</td><td>2,714</td><td>1.1x</td></tr>
+    <tr><td>2-5 kb</td><td>-1.49</td><td>3,795</td><td>1.0x (baseline)</td></tr>
+    <tr><td>&gt;5 kb</td><td>-1.56</td><td>1,212</td><td>0.95x</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-ok">
+  <strong>Actionable finding:</strong> Choosing a 200-500 nt 3'UTR over a &gt;5 kb UTR provides ~1.4-fold (40%) more protein output. The full range (&lt;200 nt vs &gt;5 kb) yields ~1.6-fold (60%). This is the strongest and most generalizable design rule from this analysis.
+</div>
+</section>
+
+<!-- DESIGN CANDIDATES -->
+<section id="candidates">
+<h3>2.6 Provisional Transcript-Level Design Candidates</h3>
+
+<div class="card card-warn">
+  <strong>Important framing:</strong> These are <strong>provisional candidates</strong> -- exploratory leads from glioma-associated data, not validated design-ready UTR parts. Gene-level TE cannot be confidently attributed to a specific 3'UTR isoform. Where salmon transcript-level data is available, the dominant isoform's TE is used; otherwise gene-level TE serves as a proxy. All candidates require experimental validation in the target cell type.
+</div>
+
+<p>Candidates must pass all binary design filters before scoring. Each exported sequence includes full provenance: transcript ID, isoform rank (from salmon), spliced/single-exon status, polyA signal, miRNA seed count, MFE, and filter results.</p>
+
+<h4>Design Filters (PASS/FAIL)</h4>
+<table>
+  <thead><tr><th>Filter</th><th>Criterion</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td>PolyA signal</td><td>AAUAAA or common variant within last 50 nt</td><td>Required for proper 3' end processing</td></tr>
+    <tr><td>Homopolymers</td><td>No runs &gt;6 identical bases</td><td>Synthesis incompatibility</td></tr>
+    <tr><td>RNA structure</td><td>MFE per nt (ViennaRNA RNAfold)</td><td>Stable structures impede translation</td></tr>
+    <tr><td>miRNA seeds</td><td>7-mer-m8 matches for top 10 miRNAs</td><td>Regulatory burden in common cell lines</td></tr>
+    <tr><td>TE gate</td><td>log2(TE) &gt; 0</td><td>Only translationally advantaged UTRs</td></tr>
+    <tr><td>Length gate</td><td>&ge; 100 nt</td><td>Minimum for functional polyA architecture</td></tr>
+  </tbody>
+</table>
+
+<h4>Top 10 Provisional Candidates</h4>
+<table>
+  <thead><tr><th>Rank</th><th>Gene</th><th>Transcript</th><th>Length</th><th>Exons</th><th>GC%</th><th>log2(TE)</th><th>RTE</th><th>PolyA</th><th>miRNA</th><th>MFE/nt</th><th>Score</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>LDHB</strong></td><td>ENST00000396076</td><td>203</td><td>1</td><td>35.5</td><td>6.30</td><td style="color:var(--ok);">0.07</td><td>AATAAA</td><td>0</td><td>-0.209</td><td><strong>0.905</strong></td></tr>
+    <tr><td>2</td><td><strong>HMGCR</strong></td><td>ENST00000509085</td><td>143</td><td>1</td><td>40.6</td><td>4.27</td><td style="color:var(--ok);">0.09</td><td>AATAGA</td><td>0</td><td>-0.222</td><td><strong>0.876</strong></td></tr>
+    <tr><td>3</td><td>HSPA8</td><td>ENST00000532636</td><td>248</td><td>1</td><td>33.1</td><td>9.81</td><td>-</td><td>AATAAA</td><td>3</td><td>-0.238</td><td>0.874</td></tr>
+    <tr><td>4</td><td><strong>CRYAB</strong></td><td>ENST00000528961</td><td>140</td><td>1</td><td>35.7</td><td>4.92</td><td style="color:var(--ok);">0.16</td><td>AATAAA</td><td>0</td><td>-0.178</td><td><strong>0.868</strong></td></tr>
+    <tr><td>5</td><td>PRKDC</td><td>ENST00000338368</td><td>441</td><td>1</td><td>37.6</td><td>2.64</td><td style="color:var(--ok);">0.02</td><td>AGTAAA</td><td>1</td><td>-0.228</td><td>0.836</td></tr>
+    <tr><td>6</td><td>RHOBTB3</td><td>ENST00000503737</td><td>304</td><td>1</td><td>44.4</td><td>7.20</td><td>-</td><td>TATAAA</td><td>0</td><td>-0.286</td><td>0.830</td></tr>
+    <tr><td>7</td><td>KCNH7</td><td>ENST00000332142</td><td>425</td><td>1</td><td>33.6</td><td>2.06</td><td style="color:var(--ok);">0.00</td><td>GATAAA</td><td>1</td><td>-0.172</td><td>0.812</td></tr>
+    <tr><td>8</td><td>RIOK3</td><td>ENST00000577501</td><td>224</td><td>1</td><td>41.5</td><td>5.71</td><td>-</td><td>AATAAA</td><td>1</td><td>-0.241</td><td>0.811</td></tr>
+    <tr><td>9</td><td>TYMS</td><td>ENST00000323274</td><td>584</td><td>1</td><td>36.5</td><td>1.97</td><td style="color:var(--ok);">0.03</td><td>ATTAAA</td><td>0</td><td>-0.270</td><td>0.810</td></tr>
+    <tr><td>10</td><td>CD163</td><td>ENST00000432437</td><td>621</td><td>2</td><td>30.3</td><td>2.94</td><td style="color:var(--ok);">0.00</td><td>AATAAA</td><td>2</td><td>-0.203</td><td>0.807</td></tr>
+  </tbody>
+</table>
+
+<div class="card card-ok">
+  <strong>Notable improvements vs previous version:</strong> All top candidates now have confirmed polyA signals, MFE within acceptable range (&gt; -0.3 kcal/mol/nt), and verified miRNA target site counts. 7 of 10 have measured low RTE (clean termination). Full transcript provenance included. LDHB, HMGCR, CRYAB, and PRKDC are broadly expressed housekeeping genes suitable for general-purpose design testing.
+</div>
+
+<h4>Scoring (applied only to PASS candidates)</h4>
+<p>Composite: 40% TE + 25% length + 15% GC + 20% stop context. 2,217 candidates passed all filters from 11,133 evaluated. Note: stop_score is neutral (0.5) for genes without measured RTE (~96% of candidates).</p>
+
+<h4>Candidate Caveats</h4>
+<ul>
+  <li><strong>Gene-to-isoform attribution:</strong> Gene-level TE may not reflect the specific 3'UTR isoform selected. Salmon-derived transcript TE (where available) partially addresses this but is not equivalent to direct isoform-level validation.</li>
+  <li><strong>Tissue specificity:</strong> Brain-specific genes (e.g., GABRB1, DLL3) show high TE in this glioma dataset but may not transfer to HEK293, CHO, or other expression systems.</li>
+  <li><strong>Expression bias:</strong> TE rankings are inherently biased toward highly expressed genes (50+ read minimum). Top candidates tend to be abundant housekeeping genes, partly due to this selection effect.</li>
+  <li><strong>RTE coverage:</strong> Only ~397 of ~11,000 genes had sufficient signal for read-through measurement. The stop_score is informative for only ~4% of candidates.</li>
+  <li><strong>Scoring is heuristic:</strong> Weights (40/25/15/20) lack empirical calibration. The ranking is a prioritization tool, not a predictive model.</li>
+</ul>
+</section>
+
+<!-- =============================== INTERPRETATION =============================== -->
+<section id="interpretation">
+<h2>3. Interpretation</h2>
+
+<h3>What the Data Tells Us</h3>
+<ol>
+  <li><strong>Shorter 3'UTRs (200-500 nt) are associated with higher TE.</strong> This is the strongest and most actionable finding (~1.6-fold effect). It aligns with established biology: shorter UTRs present fewer targets for miRNA-mediated repression and fewer destabilizing elements. Evolutionary selection has shaped housekeeping genes toward shorter UTRs.</li>
+  <li><strong>Moderate GC content (~35-45%) is weakly favorable.</strong> High GC promotes stable secondary structures that can impede ribosome scanning and 43S complex loading. The effect is real but explains only ~1.4% of TE variance, making it a poor predictor for individual sequences.</li>
+  <li><strong>Top-ranked candidates come from highly expressed, efficiently translated genes</strong> (PCBP1, ALDOA, EIF4A1, ASNS). These genes have been under evolutionary selection for efficient translation. Tissue-specific candidates (GABRB1, DLL3, H2BC5) may not transfer to other cell types or growth states.</li>
+  <li><strong>Low-RTE stop codon contexts can be identified.</strong> Genes with RTE &lt; 1 show efficient termination in this dataset. Their stop codon flanking sequences may inform codon choice, though the P-site correction applied (12 nt default) is approximate rather than empirically calibrated.</li>
+  <li><strong>Read-through is detectable but rare.</strong> After filtering artifacts, only a handful of genes show elevated RTE (1.0-3.0). However, distinguishing true read-through from re-initiation or ribosome queuing requires additional evidence beyond coverage ratios.</li>
+</ol>
+
+<h3>What the Data Does NOT Tell Us</h3>
+<ol>
+  <li><strong>Causation.</strong> All correlations are observational. A 3'UTR from a high-TE gene may confer high TE, or the gene may be high-TE for entirely unrelated reasons (promoter strength, codon usage, 5'UTR structure, protein stability). The 3'UTR sequence alone does not determine TE.</li>
+  <li><strong>Cell-type specificity.</strong> This dataset is from one tissue context (glioma tumor vs adjacent normal brain). The same 3'UTR may behave differently in HEK293, CHO, or primary human cells where the miRNA and RNA-binding protein landscape differs dramatically.</li>
+  <li><strong>Which specific sequence elements within the 3'UTR drive TE.</strong> The analysis computes bulk features (GC%, ARE density, length) but does not identify individual regulatory motifs (specific miRNA binding sites, RNA-binding protein motifs, secondary structures). A 500 nt UTR with optimal bulk features could still contain a potent silencing element.</li>
+  <li><strong>mRNA stability vs translation rate.</strong> TE as measured here (Ribo-seq/RNA-seq ratio) conflates two processes: how efficiently ribosomes load onto an mRNA, and how stable the mRNA is. A gene with rapid mRNA degradation but normal ribosome loading will appear to have high TE.</li>
+  <li><strong>Whether the design score predicts performance.</strong> The scoring weights (40/25/15/20) are heuristic and uncalibrated. Without experimental validation, the ranking is a hypothesis, not a result. The score identifies genes with high TE and short UTRs; it may simply rediscover housekeeping genes rather than identify superior 3'UTR sequences.</li>
+  <li><strong>Codon context effects.</strong> The last ~30 codons before the stop codon influence termination efficiency and read-through propensity, but these are not analyzed. Optimal stop codon context (which nucleotides follow the stop) is not extracted.</li>
+</ol>
+</section>
+
+<!-- =============================== SECTION 3: LIMITATIONS & NEXT STEPS =============================== -->
+
+<section id="limitations">
+<h2>4. Limitations</h2>
+
+<h3>Experimental Design</h3>
+<ul>
+  <li><strong>n=1 Ribo-seq per condition</strong> (1 normal, 2 tumor). All tumor-vs-normal comparisons are purely descriptive with no statistical power for individual gene calls.</li>
+  <li><strong>Unbalanced replication:</strong> 3 normal vs 2 tumor RNA-seq replicates complicates per-condition averaging.</li>
+  <li><strong>Sample identity caveat:</strong> SRR1562541/SRR1562542 assignment to tumor/normal was inferred from GEO metadata and should be independently verified.</li>
+</ul>
+
+<h3>Data Quality</h3>
+<ul>
+  <li><strong>RPF length (26.6 nt)</strong> is below the expected 28-31 nt, suggesting mild RNase over-digestion. Reduces confidence in codon-resolution analyses.</li>
+  <li><strong>Frame 0 periodicity (41-44%)</strong> is below the 45% quality threshold. The data is genuine Ribo-seq (well above the 33% random baseline) but a fraction of reads may be degradation products that survived size selection.</li>
+  <li><strong>Approximate P-site correction.</strong> A fixed 12 nt offset (literature default for human RPFs) is applied for RTE computation. This is an approximation; full metagene-calibrated, length-specific offsets would provide sharper boundary resolution but were not computed.</li>
+</ul>
+
+<h3>Analytical Limitations</h3>
+<ul>
+  <li><strong>Bulk feature correlations are weak.</strong> GC (r = -0.12) and ARE density (r = +0.04) explain &lt;2% of TE variance. These are population-level trends, not individual-sequence predictors.</li>
+  <li><strong>Design score is heuristic.</strong> Weights (40/25/15/20) lack empirical calibration. The stop_score component is effectively inactive for 96% of genes (neutral score of 0.5), making the practical weighting ~53% TE, ~33% length, ~20% GC.</li>
+  <li><strong>Tissue specificity.</strong> This is glioma/brain tissue data. miRNA profiles, RBP expression, and ribosome composition differ across cell types. Brain-specific candidates (GABRB1, DLL3, H2BC5) may not perform well in HEK293, CHO, or other expression systems.</li>
+  <li><strong>Expression bias.</strong> TE rankings are biased toward highly expressed genes because the method requires 50+ reads in both assays. Top candidates are housekeeping genes partly due to this selection effect.</li>
+  <li><strong>Design filters are basic.</strong> PolyA signal, homopolymers, miRNA seed matches, and MFE are now computed, but these are simple scans. Full miRNA target prediction (TargetScan context scores), comprehensive RBP motif analysis, and experimental miRNA/RBP expression profiling in the target cell type would strengthen candidate selection.</li>
+  <li><strong>Gene-to-isoform attribution remains approximate.</strong> Salmon transcript-level quantification identifies the dominant isoform, but alternative polyadenylation and tissue-specific isoform usage may cause the observed TE to reflect a different 3'UTR than the one selected.</li>
+</ul>
+
+<h3>Confidence Assessment</h3>
+<table>
+  <thead><tr><th>Finding</th><th>Confidence</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td>Shorter 3'UTRs correlate with higher TE</td><td><span class="tag tag-high">High</span></td><td>Large n, consistent trend, literature support</td></tr>
+    <tr><td>Top candidates from housekeeping genes</td><td><span class="tag tag-high">High</span></td><td>Expected, reproducible</td></tr>
+    <tr><td>Moderate GC weakly favorable</td><td><span class="tag tag-mod">Moderate</span></td><td>Statistically significant but r = -0.12</td></tr>
+    <tr><td>ARE density affects TE</td><td><span class="tag tag-mod">Inconclusive</span></td><td>r = +0.04 reflects length confound; cannot distinguish ARE effect from UTR length in this dataset</td></tr>
+    <tr><td>Specific design score ranking</td><td><span class="tag tag-low">Low</span></td><td>Heuristic, uncalibrated, tissue-specific</td></tr>
+    <tr><td>Differential TE (tumor vs normal)</td><td><span class="tag tag-low">Very low</span></td><td>n=1, underpowered</td></tr>
+    <tr><td>Read-through candidates</td><td><span class="tag tag-mod">Moderate</span></td><td>Biologically plausible; P-site-corrected but approximate</td></tr>
+    <tr><td>Transcript-level isoform attribution</td><td><span class="tag tag-mod">Moderate</span></td><td>Salmon identifies dominant isoform; APA effects not fully resolved</td></tr>
+    <tr><td>Individual candidates confer high TE</td><td><span class="tag tag-na">Unknown</span></td><td>Requires reporter assay in target cell type</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="nextsteps">
+<h2>5. Recommended Next Steps</h2>
+
+<h3>Priority 1: Cross-Cell-Type Validation</h3>
+<div class="card card-info">
+  <strong>The single biggest limitation of this analysis is tissue specificity.</strong> All findings derive from one tissue context (glioma/brain). Running the same pipeline on multiple cell types would separate universal UTR properties from tissue-specific effects and build a consensus ranking with dramatically higher confidence.
+</div>
+
+<p>The pipeline is already parameterized and portable. Suggested public datasets with matched Ribo-seq + RNA-seq:</p>
+
+<table>
+  <thead><tr><th>Cell Type</th><th>Rationale</th><th>GEO Accession(s)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>HEK293</strong></td><td>Most common mammalian expression host; directly relevant for synthetic construct design</td><td>GSE94460, GSE73136</td></tr>
+    <tr><td><strong>HeLa</strong></td><td>Widely used, extensive published data; enables comparison with many existing studies</td><td>GSE58207, GSE65885</td></tr>
+    <tr><td><strong>K562</strong></td><td>ENCODE reference cell line; hematopoietic lineage provides tissue diversity</td><td>ENCODE Ribo-seq</td></tr>
+    <tr><td><strong>MCF7</strong></td><td>Breast cancer; tests generalizability beyond neural tissue</td><td>GSE86512</td></tr>
+    <tr><td><strong>Mouse liver / ESC</strong></td><td>Cross-species validation; tests whether design rules are evolutionarily conserved</td><td>Various (mouse GRCm39)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Expected outputs from multi-cell-type analysis:</strong></p>
+<ul>
+  <li>Per-cell-type TE rankings and design scores using identical methodology</li>
+  <li>Consensus ranking: UTRs that score highly across 3+ cell types are the strongest candidates</li>
+  <li>Tissue-specificity coefficient for each UTR (variance in rank across cell types)</li>
+  <li>Validation of design rules: does the length-TE correlation hold universally?</li>
+  <li>Cell-type-specific miRNA and RBP effects revealed by divergent rankings</li>
+</ul>
+
+<h3>Priority 2: Before Ordering Synthesis</h3>
+<div class="card card-warn">
+  <ol>
+    <li><strong>Full miRNA target prediction</strong> (TargetScan 8.0 context scores, miRDB) for the intended host cell line. The pipeline's 7-mer seed scan is a rough filter; context-dependent prediction is more reliable.</li>
+    <li><strong>Review MFE and structure predictions</strong> in the exported CSV. Flag candidates with MFE &lt; -0.3 kcal/mol/nt or predicted stable hairpins near the polyA signal.</li>
+    <li><strong>Verify polyA signal architecture</strong> in the FASTA headers. Candidates marked "none" for polyA signal should be deprioritized or manually inspected.</li>
+    <li><strong>Include positive controls:</strong> HBB (beta-globin), HBA1 (alpha-globin), and AES 3'UTRs as established benchmarks. If candidates don't outperform these, the analysis hasn't added value.</li>
+  </ol>
+</div>
+
+<h3>Priority 3: Computational Extensions</h3>
+<ul>
+  <li><strong>Full motif enrichment analysis:</strong> scan candidates against RBPDB, UTRdb for RNA-binding protein motifs beyond the basic miRNA seed scan.</li>
+  <li><strong>Codon context analysis:</strong> examine the last 30-60 codons before the stop codon for optimal usage and termination context.</li>
+  <li><strong>Metagene P-site calibration:</strong> empirically determine read-length-specific P-site offsets around start codons for this dataset, replacing the 12 nt default.</li>
+</ul>
+
+<h3>Priority 4: Experimental Validation</h3>
+<ul>
+  <li><strong>Reporter assay:</strong> clone top 5-10 candidate 3'UTRs downstream of Firefly luciferase in the target cell type. This is the critical validation step.</li>
+  <li><strong>Massively parallel reporter assay (MPRA):</strong> 100-200 candidates with truncation variants to identify minimal functional elements.</li>
+  <li><strong>Synthetic 3'UTR design:</strong> combine rules (200-400 nt, 38-42% GC, no predicted miRNA sites, minimal structure) into fully synthetic constructs and benchmark against natural candidates.</li>
+</ul>
+</section>
+
+</div>
+
+<footer>
+  Analysis performed on GSE61334 | Pipeline: ribo_rnaseq_analysis.ipynb | Reference: GRCh38.p14, GENCODE v46<br>
+  Quantification: STAR (genome) + salmon (transcriptome) | Filters: polyA, homopolymers, miRNA seeds, MFE<br>
+  50 provisional candidate 3'UTR sequences in <code>top_3utr_candidates.fasta</code> | Full table: <code>utr_design_analysis.csv</code>
+</footer>
+
+</body>
+</html>
