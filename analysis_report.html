@@ -463,7 +463,7 @@ multiqc_report/             Aggregated QC report (fastp + STAR)</pre>
 </div>
 
 <div class="card card-info">
-  <strong>RPF read length: 26.6-26.7 nt average</strong>, below the expected 28-31 nt human peak. This suggests mild RNase over-digestion in the original experiment (GSE61334, published 2014). The consequence is reduced positional precision for codon-resolution analyses, but gene-level TE estimates remain valid.
+  <strong>RPF read length: 26.6-26.7 nt average</strong>, below the expected 28-31 nt human peak. This suggests mild RNase over-digestion in the original experiment (GSE61334, published 2014). The consequence is reduced positional precision for codon-resolution analyses, but gene-level TE estimates are usable for ranking but may contain background noise from non-RPF reads that passed size selection.
 </div>
 
 <div class="fig-container">
@@ -643,7 +643,7 @@ multiqc_report/             Aggregated QC report (fastp + STAR)</pre>
 </table>
 
 <div class="card card-ok">
-  <strong>Notable improvements vs previous version:</strong> All top candidates now have detected polyA signals, MFE within acceptable range (&gt; -0.3 kcal/mol/nt), and verified miRNA target site counts. 7 of 10 have measured low RTE (suggesting efficient termination, though based on approximate fixed P-site correction). Full transcript provenance included. LDHB, HMGCR, CRYAB, and PRKDC are broadly expressed housekeeping genes and reasonable candidates to test experimentally.
+  All top candidates have detected polyA signals, MFE within acceptable range (&gt; -0.3 kcal/mol/nt), and verified miRNA target site counts. 7 of 10 have measured low RTE (suggesting efficient termination, though based on approximate fixed P-site correction). Full transcript provenance included. LDHB, HMGCR, CRYAB, and PRKDC are broadly expressed housekeeping genes and reasonable candidates to test experimentally.
 </div>
 
 <h4>Scoring (applied only to PASS candidates)</h4>
@@ -708,8 +708,9 @@ multiqc_report/             Aggregated QC report (fastp + STAR)</pre>
   <li><strong>Design score is heuristic.</strong> Weights (40/25/15/20) lack empirical calibration. The stop_score component is effectively inactive for 96% of genes (neutral score of 0.5), making the practical weighting ~53% TE, ~33% length, ~20% GC.</li>
   <li><strong>Tissue specificity.</strong> This is glioma/brain tissue data. miRNA profiles, RBP expression, and ribosome composition differ across cell types. Tissue-enriched candidates (e.g., KCNH7, CD163) may not perform well in HEK293, CHO, or other expression systems.</li>
   <li><strong>Expression bias.</strong> TE rankings are biased toward highly expressed genes because the method requires 50+ reads in both assays. Top candidates are housekeeping genes partly due to this selection effect.</li>
-  <li><strong>Design filters are basic.</strong> PolyA signal, homopolymers, miRNA seed matches, and MFE are now computed, but these are simple scans. Full miRNA target prediction (TargetScan context scores), comprehensive RBP motif analysis, and experimental miRNA/RBP expression profiling in the target cell type would strengthen candidate selection.</li>
+  <li><strong>Design filters are basic.</strong> PolyA signal, homopolymers, miRNA seed matches, and MFE are computed, but these are simple scans. Full miRNA target prediction (TargetScan context scores), comprehensive RBP motif analysis, and experimental miRNA/RBP expression profiling in the target cell type would strengthen candidate selection.</li>
   <li><strong>Gene-to-isoform attribution remains approximate.</strong> Salmon transcript-level quantification identifies the dominant isoform, but alternative polyadenylation and tissue-specific isoform usage may cause the observed TE to reflect a different 3'UTR than the one selected.</li>
+  <li><strong>Strandedness mismatch.</strong> Ribo-seq was counted stranded (<code>-s 1</code>, sense only) while RNA-seq was counted unstranded (<code>-s 0</code>, both strands). For genes with antisense transcription, unstranded RNA-seq overestimates mRNA abundance, deflating apparent TE. This primarily affects loci with overlapping antisense transcripts or bidirectional promoters.</li>
 </ul>
 
 <h3>Confidence Assessment</h3>
@@ -774,6 +775,7 @@ multiqc_report/             Aggregated QC report (fastp + STAR)</pre>
   <li><strong>Full motif enrichment analysis:</strong> scan candidates against RBPDB, UTRdb for RNA-binding protein motifs beyond the basic miRNA seed scan.</li>
   <li><strong>Codon context analysis:</strong> examine the last 30-60 codons before the stop codon for optimal usage and termination context.</li>
   <li><strong>Metagene P-site calibration:</strong> empirically determine read-length-specific P-site offsets around start codons for this dataset, replacing the 12 nt default.</li>
+  <li><strong>Formal statistical TE testing:</strong> with adequate biological replication, apply dedicated Ribo-seq TE tools (Xtail, riborex, or DESeq2 interaction model) to obtain FDR-controlled TE rankings rather than simple ratio-based estimates.</li>
 </ul>
 
 <h3>Priority 4: Experimental Validation</h3>
